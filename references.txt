@@ -1,0 +1,20 @@
+1.	White B, Porterfield S: Anatomy and histology of the thyroid gland. Endocr. Reprod. Physiol. 4th ed., Philadelphia, PA, Elsevier/Mosby. 2013, pp. 129�46.
+2.	Wahl RL: Thyroid radionuclide uptake and imaging studies. In: Braverman LE, Cooper DS, editors. Werner Ingbar�s Thyroid a Fundam. Clin. text. 10th ed., Philadelphia, PA, Wolters Kluwer/Lippincott Williams & Wilkins Health. 2013, pp. 257�78.
+3.	Stephenson TJ: Thyroid. In: Underwood JCE, editor. Gen. Syst. Pathol. 4th ed., Edinburgh, England, Churchill Livingstone. 2004, pp. 448�57.
+4.	Yen PM: Physiological and molecular basis of thyroid hormone action. Physiol Rev. 2001; 81:1097�142.
+5.	Demers LM, Spencer CA: Laboratory Medicine Practice Guidelines: Laboratory Support for the Diagnosis and Monitoring of Thyroid Disease. Washington, DC, National Academy of Clinical Biochemistry. 2002.
+6.	Ladenson PW, Singer P a, Ain KB, Bagchi N, Bigos ST, Levy EG, et al.: American Thyroid Association guidelines for detection of thyroid dysfunction. Arch Intern Med. 2000; 160:1573�75.
+7.	Canaris GJ, Manowitz NR, Mayor G, Ridgway EC: The Colorado thyroid disease prevalence study. Arch Intern Med. 2000; 160:526�34.
+8.	Cooper DS, Biondi B: Subclinical thyroid disease. Lancet. 2012; 379:1142�54.
+9.	Wartofsky L, Dickey RA: The evidence for a narrower thyrotropin reference range is compelling. J Clin Endocrinol Metab. 2005; 90:5483�88.
+10.	Surks MI: TSH Reference Limits: New Concepts and Implications for Diagnosis of Subclinical Hypothyroidism. Endocr Pract. 2013:1�13.
+11.	Brabant G, Beck-Peccoz P, Jarzab B, Laurberg P, Orgiazzi J, Szabolcs I, et al.: Is there a need to redefine the upper normal limit of TSH? Eur J Endocrinol. 2006; 154:633�37.
+12.	Jabbar A, Pingitore A, Pearce SHS, Zaman A, Iervasi G, Razvi S: Thyroid hormones and cardiovascular disease. Nat Rev Cardiol. 2016; 14:1�17.
+13.	WHO: Global status report on noncommunicable diseases 2014. Geneva, Switzerland, World Health Organization. 2014.
+14.	Boekholdt SM, Titan SM, Wiersinga WM, Chatterjee K, Basart DCG, Luben R, et al.: Initial thyroid status and cardiovascular risk factors: the EPIC-Norfolk prospective population study. Clin Endocrinol (Oxf). 2010; 72:404�10.
+15.	Asvold BO, Bj�ro T, Nilsen TIL, Vatten LJ: Association between blood pressure and serum thyroid-stimulating hormone concentration within the reference range: a population-based study. J Clin Endocrinol Metab. 2007; 92:841�45.
+16.	Iqbal A, Figenschau Y, Jorde R: Blood pressure in relation to serum thyrotropin: The Troms� study. J Hum Hypertens. 2006; 20:932�36.
+17.	Saito I, Ito K, Saruta T: Hypothyroidism as a cause of hypertension. Hypertension. 1983; 5:112�15.
+18.	Streeten DH, Anderson Jr GH, Howland T, Chiang R, Smulyan H: Effects of thyroid function on blood pressure. Recognition of hypothyroid hypertension. Hypertension. 1988; 11:78�83.
+19.	Ittermann T, Tiller D, Meisinger C, Agger C, Nauck M, Rettig R, et al.: High Serum Thyrotropin Levels Are Associated with Current But Not with Incident Hypertension. Thyroid. 2013; 23:955�63.
+20.	Asvold BO, Bj�ro T, Vatten LJ: Associations of TSH levels within the reference range with future blood pressure and lipid concentrations: 11-year follow-up of the HUNT study. Eur J Endocrinol. 2013; 169:73�82.

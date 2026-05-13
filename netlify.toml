@@ -1,0 +1,15 @@
+# Deploy: connect this GitHub repo to Netlify (default build settings are fine). No env vars required.
+# Optional: NCBI_CONTACT_EMAIL (your address sent to NCBI instead of the built-in placeholder),
+#           NCBI_API_KEY (higher NCBI rate limits).
+
+[build]
+  command = "npm run build"
+  publish = "public"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# Default Lambda timeout is 10s; free/starter plans allow up to 26s per function.
+[functions."pubmed-abstracts"]
+  timeout = 26

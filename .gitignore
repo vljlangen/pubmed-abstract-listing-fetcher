@@ -1,0 +1,8 @@
+.DS_Store
+chat-session-memory/
+old_stuff/
+node_modules/
+.env
+.env.*
+*.log
+pubmed_abstracts.html

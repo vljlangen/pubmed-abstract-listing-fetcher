@@ -1,0 +1,11 @@
+{
+  "name": "pubmed-abstract-listing",
+  "private": true,
+  "description": "Static site + Netlify function for PubMed abstract listings.",
+  "scripts": {
+    "build": "node -e \"console.log('No compile step; publishing public/ as-is.')\""
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PubMed abstract listing (GitHub)</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2rem;
+      max-width: 920px;
+    }
+    textarea {
+      width: 100%;
+      height: 220px;
+      font-family: monospace;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+      box-sizing: border-box;
+    }
+    button {
+      margin: 0.2rem 0.4rem 0.2rem 0;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .muted { color: #555; font-size: 0.95rem; }
+    .warn { color: #a60; font-size: 0.92rem; margin-top: 0.5rem; }
+    .steps { line-height: 1.55; }
+    .steps li { margin-bottom: 0.5rem; }
+    .footer-note {
+      font-size: 0.85rem;
+      color: #555;
+      line-height: 1.45;
+      margin-top: 2.5rem;
+      border-top: 1px solid #eee;
+      padding-top: 1rem;
+    }
+    .footer-note a { color: #0077cc; }
+    .footer-note a:hover { text-decoration: underline; }
+    code { background: #f4f4f4; padding: 0.1rem 0.35rem; border-radius: 3px; }
+    h2 { margin-top: 0; }
+  </style>
+</head>
+<body>
+
+<h2>PubMed abstract listing (GitHub Actions)</h2>
+
+<p>Paste numbered references, <strong>one per line</strong>. This page prepares your run and links you to GitHub, where the same
+<code>pubmed_abstracts.js</code> logic runs on a server with a <strong>live log</strong> (so you can see “Processing 3 / 20 …” and know it is not stuck).</p>
+
+<p class="muted"><strong>Why two places?</strong> A plain GitHub Pages site cannot securely start Actions or read live logs from your browser (no API token in the page, and GitHub’s API blocks normal web pages). So: prepare here → run on GitHub → watch the log there → download the zip from the finished run.</p>
+
+<ul class="steps">
+  <li><strong>1.</strong> Paste below (or load a sample from your repo’s <code>references.txt</code> elsewhere).</li>
+  <li><strong>2.</strong> Click <strong>Copy for GitHub</strong>, then <strong>Open GitHub Actions</strong>.</li>
+  <li><strong>3.</strong> On GitHub: <strong>Run workflow</strong> → paste into the <strong>references</strong> box (leave empty to use <code>references.txt</code> from the repo instead).</li>
+  <li><strong>4.</strong> Open the running job → expand <strong>Generate PubMed listing</strong> — the stream matches what you see locally in the terminal.</li>
+  <li><strong>5.</strong> When the job finishes: <strong>Artifacts</strong> → download <code>pubmed-abstracts-output.zip</code> (HTML + plain text + PDF).</li>
+</ul>
+
+<p id="charNote" class="warn" hidden></p>
+
+<textarea id="refsInput" placeholder="1. First Author: Title. Journal. Year; Volume:Pages.
+2. Second Author: Another title. Journal. Year;"></textarea>
+
+<div>
+  <button type="button" id="copyBtn">Copy for GitHub</button>
+  <button type="button" id="actionsBtn">Open GitHub Actions</button>
+</div>
+<p id="copyStatus" class="muted" style="min-height:1.25rem;margin-top:0.5rem;"></p>
+
+<p class="footer-note">
+  <small>
+    <strong>Outputs.</strong> One zip contains <code>pubmed_abstracts.html</code> (rich layout), <code>pubmed_abstracts.txt</code> (stripped text), and
+    <code>pubmed_abstracts.pdf</code> (simple printout from that text). Prefer the HTML for quality; use TXT/PDF for quick sharing or printing.<br>
+    <strong>GitHub Pages:</strong> enable Pages from the <code>/docs</code> folder in repo Settings if this file is not yet served.<br>
+    Respect <a href="https://www.ncbi.nlm.nih.gov/home/about/policies/" target="_blank" rel="noopener">NCBI policies</a> and rate limits.
+  </small>
+</p>
+
+<script>
+(function () {
+  var GH_INPUT_LIMIT = 10000;
+  var refsInput = document.getElementById("refsInput");
+  var copyBtn = document.getElementById("copyBtn");
+  var actionsBtn = document.getElementById("actionsBtn");
+  var copyStatus = document.getElementById("copyStatus");
+  var charNote = document.getElementById("charNote");
+
+  function guessRepoRoot() {
+    var h = location.hostname;
+    if (h === "github.io" || (h.length > 10 && h.slice(-10) === ".github.io")) {
+      var owner = h.replace(".github.io", "");
+      var parts = location.pathname.split("/").filter(Boolean);
+      var repo = parts[0] || "";
+      if (owner && repo) return "https://github.com/" + owner + "/" + repo;
+    }
+    return null;
+  }
+
+  function workflowUrl(root) {
+    return root + "/actions/workflows/pubmed-abstracts.yml";
+  }
+
+  function updateCharNote() {
+    var n = refsInput.value.length;
+    if (n > GH_INPUT_LIMIT - 500) {
+      charNote.hidden = false;
+      charNote.textContent =
+        "GitHub’s workflow form limits pasted input (about " +
+        GH_INPUT_LIMIT +
+        " characters). If you exceed it, commit a longer list as references.txt in the repo and run the workflow with an empty references field.";
+    } else {
+      charNote.hidden = true;
+    }
+  }
+
+  refsInput.addEventListener("input", updateCharNote);
+  updateCharNote();
+
+  copyBtn.addEventListener("click", function () {
+    var t = refsInput.value;
+    if (!t.trim()) {
+      copyStatus.textContent = "Paste something first, or leave the workflow box empty on GitHub to use references.txt.";
+      return;
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(t).then(
+        function () {
+          copyStatus.textContent = "Copied. On GitHub, paste into the “references” workflow field.";
+        },
+        function () {
+          copyStatus.textContent = "Copy failed — select all in the box and copy manually (Cmd/Ctrl+C).";
+        }
+      );
+    } else {
+      copyStatus.textContent = "Select all in the box and copy manually (Cmd/Ctrl+C).";
+    }
+  });
+
+  actionsBtn.addEventListener("click", function () {
+    var root = guessRepoRoot();
+    if (!root) {
+      window.open("https://docs.github.com/en/actions/using-workflows/manually-running-a-workflow", "_blank", "noopener");
+      copyStatus.textContent =
+        "Open your repository on GitHub, then Actions → “PubMed abstract listing” → Run workflow. (This page could not detect your repo URL — use GitHub Pages on *.github.io/repo/ for auto-links.)";
+      return;
+    }
+    window.open(workflowUrl(root), "_blank", "noopener");
+    copyStatus.textContent = "Opened Actions. Use Run workflow → paste references → watch the job log live.";
+  });
+})();
+</script>
+</body>
+</html>

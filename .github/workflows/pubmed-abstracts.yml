@@ -1,0 +1,66 @@
+# Runs pubmed_abstracts.js on GitHub-hosted runners. Optional: paste references in the workflow UI.
+# Live progress appears in the job log (same lines as local terminal).
+# Artifact: pubmed-abstracts-output.zip (HTML + TXT + PDF).
+#
+# Optional repo secrets: NCBI_CONTACT_EMAIL, NCBI_API_KEY — if unset, the script uses its defaults.
+
+name: PubMed abstract listing
+
+on:
+  workflow_dispatch:
+    inputs:
+      references:
+        description: "Paste references (one per line). Leave empty to use references.txt from the repo."
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Prepare reference file
+        env:
+          REFERENCES: ${{ inputs.references }}
+        run: |
+          if [ -n "$REFERENCES" ]; then
+            printenv REFERENCES > user-references.txt
+          else
+            cp references.txt user-references.txt
+          fi
+
+      - name: Generate PubMed listing
+        env:
+          NCBI_API_KEY: ${{ secrets.NCBI_API_KEY }}
+          NCBI_CONTACT_EMAIL: ${{ secrets.NCBI_CONTACT_EMAIL }}
+        run: node pubmed_abstracts.js user-references.txt pubmed_abstracts.html
+
+      - name: Install reportlab (PDF helper)
+        run: pip install reportlab
+
+      - name: Build TXT and PDF from HTML
+        run: python3 scripts/gh-artifacts-from-html.py pubmed_abstracts.html
+
+      - name: Zip outputs
+        run: |
+          set -e
+          zip pubmed-abstracts-output.zip pubmed_abstracts.html pubmed_abstracts.txt
+          if [ -f pubmed_abstracts.pdf ]; then
+            zip pubmed-abstracts-output.zip pubmed_abstracts.pdf
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pubmed-abstracts-output
+          path: pubmed-abstracts-output.zip
+          if-no-files-found: error

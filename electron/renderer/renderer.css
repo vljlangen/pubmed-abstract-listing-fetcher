@@ -11,7 +11,14 @@ h2 {
 .lede {
   color: #333;
   line-height: 1.45;
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.format-hint {
+  color: #333;
+  line-height: 1.45;
+  margin: 0 0 0.5rem 0;
+  font-size: 0.95rem;
 }
 
 fieldset.source-field {
@@ -119,6 +126,103 @@ progress {
   color: #0077cc;
 }
 
+.license-notice {
+  margin: 0 0 1.25rem 0;
+  color: #555;
+  line-height: 1.45;
+  font-size: 0.85rem;
+}
+
 .footer-note a:hover {
   text-decoration: underline;
+}
+
+.link-button {
+  display: inline;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: inherit;
+  color: #0077cc;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.link-button:hover {
+  color: #005599;
+}
+
+.license-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.45);
+  box-sizing: border-box;
+}
+
+.license-modal[hidden] {
+  display: none;
+}
+
+.license-modal-panel {
+  max-width: 36rem;
+  width: 100%;
+  max-height: min(85vh, 32rem);
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.license-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid #e5e5e5;
+  flex-shrink: 0;
+}
+
+.license-modal-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.license-modal-close {
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #555;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+.license-modal-close:hover {
+  background: #f0f0f0;
+  color: #111;
+}
+
+.license-modal-body {
+  margin: 0;
+  padding: 1rem 1.1rem;
+  overflow: auto;
+  flex: 1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #222;
+  background: #fafafa;
 }

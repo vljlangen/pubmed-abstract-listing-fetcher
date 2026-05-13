@@ -8,6 +8,7 @@ const { ZipArchive } = require("archiver");
 const projectRoot = path.join(__dirname, "..");
 const pubmedScript = path.join(projectRoot, "pubmed_abstracts.js");
 const references5Path = path.join(projectRoot, "references5.txt");
+const licenseFilePath = path.join(projectRoot, "LICENSE");
 
 function htmlToPlainText(html) {
   let s = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "");
@@ -76,7 +77,32 @@ function flushCarry(wc, carryRef, channel, parseProgress) {
   }
 }
 
-function zipHtmlAndTxt(htmlPath, destZipPath) {
+/**
+ * Renders local HTML (with embedded CSS) to PDF using Chromium's print pipeline.
+ */
+async function renderHtmlToPdf(htmlFilePath, pdfOutPath) {
+  const absHtml = path.resolve(htmlFilePath);
+  const win = new BrowserWindow({
+    show: false,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true
+    }
+  });
+  try {
+    await win.loadFile(absHtml);
+    const pdfBuffer = await win.webContents.printToPDF({
+      printBackground: true,
+      displayHeaderFooter: false,
+      pageSize: "A4"
+    });
+    await fs.promises.writeFile(pdfOutPath, pdfBuffer);
+  } finally {
+    if (!win.isDestroyed()) win.destroy();
+  }
+}
+
+function zipArtifacts(htmlPath, destZipPath, pdfPath) {
   const htmlContent = fs.readFileSync(htmlPath, "utf8");
   const plain = htmlToPlainText(htmlContent);
   return new Promise((resolve, reject) => {
@@ -87,6 +113,9 @@ function zipHtmlAndTxt(htmlPath, destZipPath) {
     archive.pipe(output);
     archive.append(htmlContent, { name: "pubmed_abstracts.html" });
     archive.append(plain, { name: "pubmed_abstracts.txt" });
+    if (pdfPath && fs.existsSync(pdfPath)) {
+      archive.file(pdfPath, { name: "pubmed_abstracts.pdf" });
+    }
     archive.finalize();
   });
 }
@@ -101,6 +130,7 @@ async function rmDirRecursive(dir) {
 
 function createWindow() {
   const win = new BrowserWindow({
+    title: "PubMed Abstract Listing Fetcher",
     width: 920,
     height: 780,
     webPreferences: {
@@ -116,6 +146,7 @@ function createWindow() {
 let mainWindow;
 
 app.whenReady().then(() => {
+  app.setName("PubMed Abstract Listing Fetcher");
   mainWindow = createWindow();
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow();
@@ -153,6 +184,18 @@ ipcMain.handle("save-example-references", async () => {
   return { saved: true, path: filePath };
 });
 
+ipcMain.handle("read-license-file", async () => {
+  try {
+    if (!fs.existsSync(licenseFilePath)) {
+      return { ok: false, error: "LICENSE file not found." };
+    }
+    const text = await fs.promises.readFile(licenseFilePath, "utf8");
+    return { ok: true, text };
+  } catch (err) {
+    return { ok: false, error: err.message || String(err) };
+  }
+});
+
 ipcMain.handle("run-pubmed", async (event, opts) => {
   const wc = event.sender;
   const mode = opts && opts.mode;
@@ -174,6 +217,7 @@ ipcMain.handle("run-pubmed", async (event, opts) => {
   await fs.promises.mkdir(tempDir, { recursive: true });
   const inputPath = path.join(tempDir, "references.txt");
   const outputPath = path.join(tempDir, "pubmed_abstracts.html");
+  const pdfPath = path.join(tempDir, "pubmed_abstracts.pdf");
   const tempZipPath = path.join(tempDir, "pubmed-abstracts-output.zip");
 
   try {
@@ -224,7 +268,13 @@ ipcMain.handle("run-pubmed", async (event, opts) => {
       return { ok: false, error: "Output HTML was not created." };
     }
 
-    await zipHtmlAndTxt(outputPath, tempZipPath);
+    try {
+      await renderHtmlToPdf(outputPath, pdfPath);
+    } catch (pdfErr) {
+      wc.send("pubmed-log", `  PDF export skipped: ${pdfErr.message || pdfErr}`);
+    }
+
+    await zipArtifacts(outputPath, tempZipPath, pdfPath);
 
     const { canceled, filePath: savePath } = await dialog.showSaveDialog(mainWindow, {
       title: "Save PubMed output",

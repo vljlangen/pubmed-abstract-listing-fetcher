@@ -3,12 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PubMed abstract listing</title>
+  <title>PubMed Abstract Listing Fetcher</title>
   <link rel="stylesheet" href="renderer.css" />
 </head>
 <body>
-  <h2>PubMed abstract listing</h2>
-  <p class="lede">Turn a references list into one HTML page with PubMed abstracts (same engine as <code>node pubmed_abstracts.js</code>).</p>
+  <h2>PubMed Abstract Listing Fetcher</h2>
+  <p class="lede">Turn your reference lines into one continuous page of matched PubMed abstracts. The ZIP you save contains the same output as HTML, PDF, and plain-text (.txt).</p>
+  <p class="format-hint">If you would like a small sample file in a typical <strong>Vancouver</strong>-style numbered layout, click <strong>Save example references.txt</strong> below and use it as a template for your own references.</p>
+  <p class="license-notice">
+    <small>
+      Licensed under the MIT License (<button type="button" class="link-button" id="licenseOpenBtn">LICENSE</button>); provided as-is without warranty, with no liability for damages.
+    </small>
+  </p>
 
   <fieldset class="source-field">
     <legend>References input</legend>
@@ -28,7 +34,7 @@
   </div>
 
   <div class="actions">
-    <button type="button" id="runBtn" class="primary">Build listing</button>
+    <button type="button" id="runBtn" class="primary">Get abstracts &amp; save ZIP</button>
     <button type="button" id="exampleBtn">Save example references.txt</button>
   </div>
 
@@ -40,11 +46,20 @@
 
   <p class="footer-note">
     <small>
-      After the run finishes, a <strong>Save</strong> sheet opens for a ZIP containing <code>pubmed_abstracts.html</code> and a plain-text companion.
+      After the run finishes, a <strong>Save</strong> sheet opens for a ZIP containing <code>pubmed_abstracts.html</code>, <code>pubmed_abstracts.pdf</code>, and <code>pubmed_abstracts.txt</code>.
       The listing is built in a temporary folder; nothing is written to your project directory unless you save the ZIP.
-      NCBI rate limits apply; an optional <code>NCBI_API_KEY</code> in your environment speeds requests.
     </small>
   </p>
+
+  <div id="licenseModal" class="license-modal" hidden role="dialog" aria-modal="true" aria-labelledby="licenseModalTitle">
+    <div class="license-modal-panel" role="document">
+      <div class="license-modal-header">
+        <h3 id="licenseModalTitle">LICENSE</h3>
+        <button type="button" id="licenseModalClose" class="license-modal-close" aria-label="Close">×</button>
+      </div>
+      <pre id="licenseModalBody" class="license-modal-body"></pre>
+    </div>
+  </div>
 
   <script src="renderer.js"></script>
 </body>

@@ -118,3 +118,64 @@ runBtn.addEventListener("click", async () => {
 });
 
 syncPanels();
+
+/* --- LICENSE modal --- */
+const licenseOpenBtn = document.getElementById("licenseOpenBtn");
+const licenseModal = document.getElementById("licenseModal");
+const licenseModalClose = document.getElementById("licenseModalClose");
+const licenseModalBody = document.getElementById("licenseModalBody");
+const licenseModalPanel = licenseModal ? licenseModal.querySelector(".license-modal-panel") : null;
+
+function closeLicenseModal() {
+  if (!licenseModal) return;
+  licenseModal.hidden = true;
+  document.body.style.overflow = "";
+  if (licenseOpenBtn) licenseOpenBtn.focus();
+}
+
+function openLicenseModal() {
+  if (!licenseModal || !licenseModalBody) return;
+  licenseModal.hidden = false;
+  document.body.style.overflow = "hidden";
+  licenseModalClose.focus();
+}
+
+async function loadAndShowLicense() {
+  if (!window.pubmedApp || !window.pubmedApp.readLicenseFile) {
+    if (licenseModalBody) licenseModalBody.textContent = "License viewer is only available inside the app.";
+    openLicenseModal();
+    return;
+  }
+  if (licenseModalBody) licenseModalBody.textContent = "Loading…";
+  openLicenseModal();
+  const r = await window.pubmedApp.readLicenseFile();
+  if (licenseModalBody) {
+    licenseModalBody.textContent = r.ok ? r.text : `Could not read LICENSE: ${r.error || "Unknown error"}`;
+  }
+}
+
+if (licenseOpenBtn) {
+  licenseOpenBtn.addEventListener("click", () => {
+    loadAndShowLicense();
+  });
+}
+
+if (licenseModalClose) {
+  licenseModalClose.addEventListener("click", closeLicenseModal);
+}
+
+if (licenseModal) {
+  licenseModal.addEventListener("click", e => {
+    if (e.target === licenseModal) closeLicenseModal();
+  });
+}
+
+if (licenseModalPanel) {
+  licenseModalPanel.addEventListener("click", e => e.stopPropagation());
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && licenseModal && !licenseModal.hidden) {
+    closeLicenseModal();
+  }
+});

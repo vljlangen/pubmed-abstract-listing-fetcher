@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld("pubmedApp", {
   selectInputFile: () => ipcRenderer.invoke("select-input-file"),
   saveExampleReferences: () => ipcRenderer.invoke("save-example-references"),
   runPubmed: opts => ipcRenderer.invoke("run-pubmed", opts),
+  readLicenseFile: () => ipcRenderer.invoke("read-license-file"),
   onPubmedLog: fn => {
     const handler = (_e, line) => fn(line);
     ipcRenderer.on("pubmed-log", handler);

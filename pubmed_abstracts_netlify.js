@@ -126,6 +126,14 @@ async function fetchWithRetry(url, operationName) {
       continue;
     }
 
+    // Transient NCBI / gateway errors
+    if ([502, 503, 504].includes(res.status) && attempt < MAX_RETRIES) {
+      const backoffMs = 1200 * Math.pow(2, attempt);
+      console.warn(`  ${operationName}: HTTP ${res.status}, retrying in ${backoffMs} ms...`);
+      await sleep(backoffMs);
+      continue;
+    }
+
     throw new Error(`${operationName} error: HTTP ${res.status}`);
   }
 
@@ -705,6 +713,16 @@ async function resolvePmid(referenceLine) {
   };
 }
 
+/**
+ * PubMed MEDLINE-style abstract text often begins with "1. Journal…" — an internal
+ * enumerate marker that reads like the user's reference number; strip one leading match.
+ */
+function stripPubmedAbstractEnumeratePrefix(text) {
+  return String(text || "")
+    .trim()
+    .replace(/^\d+\.\s+/, "");
+}
+
 async function fetchAbstractText(pmid) {
   const base = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi";
   const params = {
@@ -722,7 +740,7 @@ async function fetchAbstractText(pmid) {
   const url = makeEutilsUrl(base, params);
   const res = await fetchWithRetry(url, "PubMed efetch");
   const text = await res.text();
-  return text.trim();
+  return stripPubmedAbstractEnumeratePrefix(text);
 }
 
 function formatMatchMetricsHtml(block) {
@@ -751,6 +769,18 @@ function formatMatchMetricsHtml(block) {
 }
 
 /**
+ * First paragraph of PubMed abstract text is usually a citation line: historically
+ * "1. Journal…"; after stripping the enumerator it may start with the journal title.
+ */
+function looksLikePubmedCitationFirstBlock(s) {
+  const t = (s || "").trim();
+  if (!t) return false;
+  if (/^\d+\.\s*\S/.test(t)) return true;
+  if (/\bdoi:\s*10\.\d+\//i.test(t)) return true;
+  return false;
+}
+
+/**
  * PubMed efetch abstract text uses blank-line paragraphs: journal line(s), title,
  * authors, then the rest. When that pattern is detected, emit semantic HTML +
  * classes; otherwise fall back to escaped plain text with line breaks.
@@ -765,7 +795,7 @@ function formatPubmedAbstractHtml(raw) {
   }
 
   const journalRaw = blocks[0];
-  if (!/^\d+\.\s*\S/.test(journalRaw)) {
+  if (!looksLikePubmedCitationFirstBlock(journalRaw)) {
     return escapeHtml(normalized).replace(/\n/g, "<br>");
   }
 
@@ -810,7 +840,10 @@ function renderBlocksToInnerHtml(blocks) {
       } else if (block.status === "not-found") {
         abstractPart = `<div class="reference-abstract not-found">Not found in PubMed.</div>`;
       } else if (block.status === "error") {
-        abstractPart = `<div class="reference-abstract not-found">Error while querying PubMed.</div>`;
+        const errLine = block.errorDetail
+          ? `<div class="query-error-detail">${escapeHtml(block.errorDetail)}</div>`
+          : "";
+        abstractPart = `<div class="reference-abstract not-found">Error while querying PubMed.${errLine}</div>`;
       }
       return [
         `<div class="reference-block">`,
@@ -833,9 +866,10 @@ function wrapFullHtml(bodyInnerHtml) {
     "    body { font-family: Arial, sans-serif; margin: 2rem; max-width: 900px; }",
     "    .reference-block { line-height: 1.4; padding-bottom: 1.25rem; margin-bottom: 1.25rem; border-bottom: 1px solid #ddd; }",
     "    .reference-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }",
-    "    .reference-original { font-weight: 600; }",
+    "    .reference-original { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; font-size: 0.88rem; font-weight: 500; line-height: 1.45; margin: 0 0 0.65rem 0; padding: 0.55rem 0.75rem; background: #f4f4f6; border: 1px solid #e0e0e4; border-radius: 5px; border-left: 3px solid #6b7280; color: #111; white-space: pre-wrap; word-break: break-word; }",
     "    .reference-abstract { margin-top: 0.75rem; line-height: 1.45; }",
     "    .not-found { font-style: italic; color: #a00; }",
+    "    .query-error-detail { font-style: normal; font-size: 0.88rem; color: #444; margin-top: 0.4rem; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }",
     "    .jaccard-warning { margin-top: 0.35rem; margin-bottom: 0.35rem; padding: 0.5rem 0.65rem; background: #fff8e6; border: 1px solid #e6c200; border-radius: 4px; font-size: 0.92rem; color: #553800; }",
     "    .match-metrics { margin-top: 0.2rem; margin-bottom: 0.75rem; font-size: 0.64rem; color: #666; line-height: 1.32; }",
     "    .match-metrics p { margin: 0 0 0.22rem 0; }",
@@ -934,7 +968,8 @@ async function buildAbstractsHtmlFromLines(lines, options = {}) {
       blocks.push({
         original: refLine,
         status: "error",
-        abstract: ""
+        abstract: "",
+        errorDetail: String(err && err.message ? err.message : err).slice(0, 800)
       });
     }
   }

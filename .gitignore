@@ -6,3 +6,4 @@ node_modules/
 .env.*
 *.log
 pubmed_abstracts.html
+dist-electron/

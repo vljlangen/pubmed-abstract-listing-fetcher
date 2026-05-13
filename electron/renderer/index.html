@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PubMed abstract listing</title>
+  <link rel="stylesheet" href="renderer.css" />
+</head>
+<body>
+  <h2>PubMed abstract listing</h2>
+  <p class="lede">Turn a references list into one HTML page with PubMed abstracts (same engine as <code>node pubmed_abstracts.js</code>).</p>
+
+  <fieldset class="source-field">
+    <legend>References input</legend>
+    <label class="radio-row"><input type="radio" name="src" value="paste" checked /> Paste text (one reference per line)</label>
+    <label class="radio-row"><input type="radio" name="src" value="file" /> Use a text file</label>
+  </fieldset>
+
+  <div id="pastePanel">
+    <textarea id="refsInput" rows="10" spellcheck="false" placeholder="Paste numbered or plain reference lines, one per line…"></textarea>
+  </div>
+
+  <div id="filePanel" hidden>
+    <p class="file-line">
+      <button type="button" id="pickFileBtn">Choose file…</button>
+      <span id="fileLabel" class="muted">No file selected</span>
+    </p>
+  </div>
+
+  <div class="actions">
+    <button type="button" id="runBtn" class="primary">Build listing</button>
+    <button type="button" id="exampleBtn">Save example references.txt</button>
+  </div>
+
+  <label class="log-label" for="logOut">Progress</label>
+  <progress id="progress" max="100" value="0"></progress>
+  <pre id="logOut" aria-live="polite"></pre>
+
+  <p id="statusLine" class="status muted" role="status"></p>
+
+  <p class="footer-note">
+    <small>
+      After the run finishes, a <strong>Save</strong> sheet opens for a ZIP containing <code>pubmed_abstracts.html</code> and a plain-text companion.
+      The listing is built in a temporary folder; nothing is written to your project directory unless you save the ZIP.
+      NCBI rate limits apply; an optional <code>NCBI_API_KEY</code> in your environment speeds requests.
+    </small>
+  </p>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

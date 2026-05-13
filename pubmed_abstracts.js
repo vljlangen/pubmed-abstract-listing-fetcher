@@ -40,7 +40,7 @@ function parseArgs() {
 
 function parseReferenceLines(rawText) {
   return rawText
-    .split(/\r?\n/)
+    .split(/\r\n|\n|\r/)
     .map(line => line.trim())
     .filter(line => line.length > 0);
 }
@@ -123,7 +123,7 @@ async function fetchWithRetry(url, operationName) {
 function cleanReferenceForSearch(referenceLine) {
   return referenceLine
     .replace(/^\d+\.\s*/, "")
-    .replace(/�/g, " ")
+    .replace(/\uFFFD|\u00d0/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -153,28 +153,87 @@ function jaccard(a, b) {
   return union === 0 ? 0 : inter / union;
 }
 
+/**
+ * First ":" that separates "authors: title" (book/chapter style). Skips doi:, PMID:,
+ * volume(issue):pages, and subtitle colons (lowercase letter immediately before ":").
+ */
+function findAuthorTitleColonIndex(line) {
+  let i = line.indexOf(":");
+  const lc = line.toLowerCase();
+  while (i >= 0) {
+    if (i >= 3 && lc.slice(i - 3, i + 1) === "doi:") {
+      i = line.indexOf(":", i + 1);
+      continue;
+    }
+    if ((i >= 5 && lc.slice(i - 5, i + 1) === "https:") || (i >= 4 && lc.slice(i - 4, i + 1) === "http:")) {
+      i = line.indexOf(":", i + 1);
+      continue;
+    }
+    if (i >= 4 && lc.slice(i - 4, i + 1) === "pmid:") {
+      i = line.indexOf(":", i + 1);
+      continue;
+    }
+    if (i >= 5 && lc.slice(i - 5, i + 1) === "pmcid:") {
+      i = line.indexOf(":", i + 1);
+      continue;
+    }
+    const slice = line.slice(Math.max(0, i - 4), Math.min(line.length, i + 6));
+    if (/\)\s*:\s*\d/.test(slice)) {
+      i = line.indexOf(":", i + 1);
+      continue;
+    }
+    if (i > 0 && /[a-z]/.test(line[i - 1])) {
+      i = line.indexOf(":", i + 1);
+      continue;
+    }
+    // Issue:pages and similar (e.g. "12:349", "379:1142")
+    if (i > 0 && /\d/.test(line[i - 1]) && i + 1 < line.length && /\d/.test(line[i + 1])) {
+      i = line.indexOf(":", i + 1);
+      continue;
+    }
+    return i;
+  }
+  return -1;
+}
+
 function extractCitationFields(referenceLine) {
   // Strip leading numbering like "1." or "10."
   const line = referenceLine.replace(/^\d+\.\s*/, "").trim();
 
-  // Year
+  // Title region: after "authors: title" colon (books), or after "et al. " / "Surname XX. "
+  // (common Vancouver journal), not the first ":" in 14(1):179 or doi:...
+  const colonIdx = findAuthorTitleColonIndex(line);
+  let titleStart = 0;
+  if (colonIdx >= 0) {
+    titleStart = colonIdx + 1;
+  } else {
+    const etAl = line.match(/,\s*et al\.\s+/i);
+    if (etAl) {
+      titleStart = etAl.index + etAl[0].length;
+    } else {
+      const multiComma = line.match(
+        /^((?:[A-Z][a-z]+(?:\s+[A-Z]{1,3})*,\s+)+(?:[A-Z][a-z]+(?:\s+[A-Z]{1,3})*))\.\s+/
+      );
+      if (multiComma) {
+        titleStart = multiComma.index + multiComma[0].length;
+      } else {
+        const singleAuth = line.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+[A-Z]{1,3})\.\s+/);
+        if (singleAuth) {
+          titleStart = singleAuth.index + singleAuth[0].length;
+        }
+      }
+    }
+  }
+
+  const afterColon = line.slice(titleStart).trim();
+  // Year for [dp]: first 4-digit year in full line (unchanged).
   const yearMatch = line.match(/(19|20)\d{2}/);
   const year = yearMatch ? yearMatch[0] : "";
-
-  // Title: usually after ":" and before the journal segment that precedes the year.
-  // We do not try to fully parse the journal; we instead:
-  //   - take the substring after ":" up to the year (or end)
-  //   - drop the last dot-delimited segment (likely journal abbreviation)
-  const colonIdx = line.indexOf(":");
-  let afterColon = colonIdx >= 0 ? line.slice(colonIdx + 1) : line;
-
+  // Title/journal split: use first year inside `afterColon` so indices match (trim removed leading space).
+  const yearInSegment = afterColon.match(/(19|20)\d{2}/);
   let beforeYear = afterColon;
-  if (yearMatch && typeof yearMatch.index === "number") {
-    const yearPosInLine = yearMatch.index;
-    // Convert yearPosInLine (in `line`) to position in `afterColon`
-    const offset = colonIdx >= 0 ? colonIdx + 1 : 0;
-    const yearPosInAfterColon = Math.max(0, yearPosInLine - offset);
-    beforeYear = afterColon.slice(0, yearPosInAfterColon);
+  if (yearInSegment && typeof yearInSegment.index === "number") {
+    beforeYear = afterColon.slice(0, yearInSegment.index);
   }
 
   // Split on "." to separate [title sentences ...] + [journal]
@@ -194,18 +253,35 @@ function extractCitationFields(referenceLine) {
     title = parts[0].trim();
   }
 
-  const firstAuthorSurname = extractFirstAuthorSurnameFromLine(line);
+  const firstAuthorSurname = extractFirstAuthorSurnameFromLine(line, colonIdx);
 
   return { line, year, title, journal, firstAuthorSurname };
 }
 
-/** First author's family name from text before ":" (e.g. "Cooper DS, Biondi B" -> "Cooper"). */
-function extractFirstAuthorSurnameFromLine(line) {
-  const colonIdx = line.indexOf(":");
-  if (colonIdx < 0) return "";
-  const beforeColon = line.slice(0, colonIdx).trim();
-  const firstChunk = beforeColon.split(",")[0].trim();
-  const words = firstChunk.split(/\s+/).filter(Boolean);
+/** First author surname: before author–title colon, or before ", et al.", or first surname in list. */
+function extractFirstAuthorSurnameFromLine(line, colonIdx) {
+  if (colonIdx >= 0) {
+    const beforeColon = line.slice(0, colonIdx).trim();
+    const firstChunk = beforeColon.split(",")[0].trim();
+    const words = firstChunk.split(/\s+/).filter(Boolean);
+    if (!words.length) return "";
+    return words[0].replace(/[^a-zA-Z\-]/g, "");
+  }
+  const etAl = line.match(/,\s*et al\.\s+/i);
+  if (etAl) {
+    const before = line.slice(0, etAl.index).trim();
+    const firstChunk = before.split(",")[0].trim();
+    const words = firstChunk.split(/\s+/).filter(Boolean);
+    if (words.length) return words[0].replace(/[^a-zA-Z\-]/g, "");
+  }
+  const firstComma = line.indexOf(",");
+  if (firstComma > 0) {
+    const firstChunk = line.slice(0, firstComma).trim();
+    const words = firstChunk.split(/\s+/).filter(Boolean);
+    if (words.length) return words[0].replace(/[^a-zA-Z\-]/g, "");
+  }
+  const head = line.split(/\.\s+/)[0] || line;
+  const words = head.trim().split(/\s+/).filter(Boolean);
   if (!words.length) return "";
   return words[0].replace(/[^a-zA-Z\-]/g, "");
 }
@@ -665,11 +741,51 @@ function formatMatchMetricsHtml(block) {
   return `<div class="match-metrics">\n${inner}\n</div>`;
 }
 
+/**
+ * PubMed efetch abstract text uses blank-line paragraphs: journal line(s), title,
+ * authors, then the rest. When that pattern is detected, emit semantic HTML +
+ * classes; otherwise fall back to escaped plain text with line breaks.
+ */
+function formatPubmedAbstractHtml(raw) {
+  if (raw == null || !String(raw).trim()) return "";
+  const normalized = String(raw).replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+  const blocks = normalized.split(/\n\n+/).map(b => b.trim()).filter(Boolean);
+
+  if (blocks.length < 3) {
+    return escapeHtml(normalized).replace(/\n/g, "<br>");
+  }
+
+  const journalRaw = blocks[0];
+  if (!/^\d+\.\s*\S/.test(journalRaw)) {
+    return escapeHtml(normalized).replace(/\n/g, "<br>");
+  }
+
+  const titleRaw = blocks[1];
+  const third = blocks[2] || "";
+  let authorsHtml = "";
+  let restFrom = 3;
+  if (/^Author information:/i.test(third)) {
+    authorsHtml = "";
+    restFrom = 2;
+  } else {
+    authorsHtml = `<p class="pubmed-authors">${escapeHtml(third).replace(/\n/g, "<br>")}</p>`;
+  }
+
+  const journalHtml = `<cite class="pubmed-journal-line">${escapeHtml(journalRaw).replace(/\n/g, "<br>")}</cite>`;
+  const titleHtml = `<p class="pubmed-article-title">${escapeHtml(titleRaw).replace(/\n/g, "<br>")}</p>`;
+  const restBlocks = blocks.slice(restFrom);
+  const restHtml =
+    restBlocks.length > 0
+      ? `<div class="pubmed-abstract-rest">${escapeHtml(restBlocks.join("\n\n")).replace(/\n/g, "<br>")}</div>`
+      : "";
+
+  return `<div class="pubmed-abstract-formatted">${journalHtml}${titleHtml}${authorsHtml}${restHtml}</div>`;
+}
+
 function renderBlocksToInnerHtml(blocks) {
   return blocks
     .map(block => {
       const escapedOriginal = escapeHtml(block.original);
-      const escapedAbstract = escapeHtml(block.abstract || "");
       let abstractPart = "";
       if (block.status === "found") {
         const metrics = formatMatchMetricsHtml(block);
@@ -677,10 +793,11 @@ function renderBlocksToInnerHtml(blocks) {
           block.jaccardWarning
             ? `<div class="jaccard-warning">${escapeHtml(block.jaccardWarning)}</div>`
             : "";
+        const abstractBody = formatPubmedAbstractHtml(block.abstract || "");
         abstractPart =
           metrics +
           warn +
-          `<div class="reference-abstract">${escapedAbstract.replace(/\n/g, "<br>")}</div>`;
+          `<div class="reference-abstract">${abstractBody}</div>`;
       } else if (block.status === "not-found") {
         abstractPart = `<div class="reference-abstract not-found">Not found in PubMed.</div>`;
       } else if (block.status === "error") {
@@ -705,14 +822,19 @@ function wrapFullHtml(bodyInnerHtml) {
     "  <title>PubMed Abstract Listing</title>",
     "  <style>",
     "    body { font-family: Arial, sans-serif; margin: 2rem; max-width: 900px; }",
-    "    .reference-block { margin-bottom: 1.5rem; line-height: 1.4; }",
+    "    .reference-block { line-height: 1.4; padding-bottom: 1.25rem; margin-bottom: 1.25rem; border-bottom: 1px solid #ddd; }",
+    "    .reference-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }",
     "    .reference-original { font-weight: 600; }",
-    "    .reference-abstract { margin-top: 0.75rem; white-space: pre-wrap; }",
+    "    .reference-abstract { margin-top: 0.75rem; line-height: 1.45; }",
     "    .not-found { font-style: italic; color: #a00; }",
     "    .jaccard-warning { margin-top: 0.35rem; margin-bottom: 0.35rem; padding: 0.5rem 0.65rem; background: #fff8e6; border: 1px solid #e6c200; border-radius: 4px; font-size: 0.92rem; color: #553800; }",
-    "    .match-metrics { margin-top: 0.25rem; margin-bottom: 1rem; font-size: 0.88rem; color: #333; line-height: 1.45; }",
-    "    .match-metrics p { margin: 0 0 0.45rem 0; }",
+    "    .match-metrics { margin-top: 0.2rem; margin-bottom: 0.75rem; font-size: 0.64rem; color: #666; line-height: 1.32; }",
+    "    .match-metrics p { margin: 0 0 0.22rem 0; }",
     "    .match-metrics p:last-child { margin-bottom: 0; }",
+    "    .pubmed-journal-line { display: block; font-style: italic; color: #333; font-size: 0.96rem; margin: 0 0 0.4rem 0; line-height: 1.45; }",
+    "    .pubmed-article-title { font-size: 1.3rem; font-weight: 700; margin: 0.45rem 0 0.4rem 0; line-height: 1.3; color: #111; }",
+    "    .pubmed-authors { margin: 0 0 0.55rem 0; color: #065fad; font-size: 0.98rem; line-height: 1.5; }",
+    "    .pubmed-abstract-rest { margin-top: 0.55rem; font-size: 0.95rem; color: #222; }",
     "  </style>",
     "</head>",
     "<body>",

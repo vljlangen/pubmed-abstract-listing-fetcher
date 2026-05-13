@@ -2,10 +2,18 @@
   "name": "pubmed-abstract-listing",
   "private": true,
   "description": "Static site + Netlify function for PubMed abstract listings.",
+  "main": "electron/main.js",
   "scripts": {
-    "build": "node -e \"console.log('No compile step; publishing public/ as-is.')\""
+    "build": "node -e \"console.log('No compile step; publishing public/ as-is.')\"",
+    "electron": "electron ."
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "electron": "^42.0.1"
+  },
+  "dependencies": {
+    "archiver": "^8.0.0"
   }
 }

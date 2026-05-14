@@ -7,13 +7,24 @@ Build a **single continuous HTML page** of PubMed abstracts from a plain-text re
 
 ## Reference list format (`references.txt`)
 
-Use **one reference per line**; empty lines are skipped. Optional leading list numbers (for example `1. `) are fine and are removed before search.
-
-References should look **Vancouver-like** (typical numbered biomedical lists): **authors** first (often with `et al.`), then the **article title** and journal/year/DOI details. The fetcher needs a clear boundary **between the author block and the start of the title**: use either a **full stop (period)** or a **colon** there—for example `…Lastname AB, Other CD. Title starts here…` or `…Lastname AB, et al: Title starts here…`. (Other colons in the line, such as in volume/issue `14(1):179` or in `doi:…`, are ignored when picking that split.)
+- Use **one reference per line**; empty lines are skipped.
+- Leading list numbers (for example `1. …`, `2. …`) are fine—you do **not** need to remove them before running this program; they are stripped internally when searching PubMed.
+- References should look **Vancouver-like** (typical numbered biomedical lists):
+  - authors first (often with *et al.*)
+  - then the article title
+  - then journal, year, DOI, and similar details
+- The fetcher needs a clear boundary **between the author block and the start of the title**. Use either a **full stop (period)** or a **colon** there, for example:
+  - `…Lastname AB, Other CD. Title starts here…`
+  - `…Lastname AB, et al: Title starts here…`
+- Other colons in the line, such as in volume/issue `14(1):179` or in `doi:…`, are ignored when choosing that split.
 
 See the sample [`references.txt`](references.txt) in this repository for real lines.
 
-**Example output:** a successful run on that file is saved as [`pubmed_abstracts_example.html`](pubmed_abstracts_example.html)—open it in a browser to see the layout and abstracts. The name ends in **`_example`** on purpose: the script’s default output is **`pubmed_abstracts.html`**, which is listed in `.gitignore` so local runs do not create noisy diffs; the example stays in git as a stable preview without embedding the whole HTML in this README.
+---
+
+## Example output
+
+A successful run on [`references.txt`](references.txt) has been saved as [`pubmed_abstracts_example.html`](pubmed_abstracts_example.html). Open it in a browser to see the layout and abstracts.
 
 ---
 

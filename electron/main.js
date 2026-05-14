@@ -238,9 +238,11 @@ ipcMain.handle("run-pubmed", async (event, opts) => {
       ELECTRON_RUN_AS_NODE: "1"
     };
 
+    // Never use projectRoot as cwd in a packaged app: it lives inside app.asar, which is not a
+    // real directory on disk — spawn(..., { cwd }) then fails with ENOTDIR.
     const { code, stderr } = await new Promise((resolve, reject) => {
       const nodeProc = spawn(process.execPath, [pubmedScript, inputPath, outputPath], {
-        cwd: projectRoot,
+        cwd: tempDir,
         env: runEnv,
         shell: false
       });

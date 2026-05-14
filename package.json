@@ -31,7 +31,6 @@
       "!**/.git/**",
       "!**/.github/**",
       "!pubmed_abstracts_netlify.js",
-      "!pubmed_abstracts_run_locally.js",
       "!**/*.docx",
       "!public/**",
       "!docs/**",
